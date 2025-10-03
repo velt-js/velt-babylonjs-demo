@@ -91,6 +91,7 @@ export default function BabylonScene() {
         <>
             <div ref={wrapperRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <canvas ref={canvasRef} style={{ width: '100%', height: '100%', outline: 'none', display: 'block' }} />
+                {/* [VELT] Import VeltBabylonComments to add comments on canvas */}
                 <VeltBabylonComments
                     sceneId={'babylon-cube-scene'}
                     engineRef={engineRef}

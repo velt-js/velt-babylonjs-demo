@@ -9,6 +9,7 @@ import { VeltCommentPin } from '@veltdev/react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useVeltBabylonComments } from './useVeltBabylonComments'
+import { useVeltCreateCommentAnchors } from './useVeltCreateCommentAnchors'
 
 type MarkerRecord = {
     id: number
@@ -32,7 +33,13 @@ export default function VeltBabylonComments(props: {
     const { sceneId, engineRef, sceneRef, cameraRef, canvasRef, isPlayingRef, ready, resolveMesh } = props
 
     // Hook: provides annotation-derived pins and wires Velt addContext
-    const { rebuiltPins } = useVeltBabylonComments({
+    const { computedPins } = useVeltBabylonComments({
+        sceneId,
+        sceneRef,
+        resolveMesh,
+    })
+
+    useVeltCreateCommentAnchors({
         sceneId,
         engineRef,
         sceneRef,
@@ -40,7 +47,6 @@ export default function VeltBabylonComments(props: {
         canvasRef,
         isPlayingRef,
         ready,
-        resolveMesh,
     })
 
     // Managed markers
@@ -54,7 +60,7 @@ export default function VeltBabylonComments(props: {
         if (!scene || !wrapper) return;
 
         // Clear existing markers if none to show
-        if (!rebuiltPins || rebuiltPins.length === 0) {
+        if (!computedPins || computedPins.length === 0) {
             for (const markerRef of markersRef.current) {
                 if (markerRef.mountEl && markerRef.mountEl.parentNode) {
                     markerRef.mountEl.parentNode.removeChild(markerRef.mountEl);
@@ -66,7 +72,7 @@ export default function VeltBabylonComments(props: {
         }
 
         const newMarkers: MarkerRecord[] = []
-        for (const pin of rebuiltPins) {
+        for (const pin of computedPins) {
             const record: MarkerRecord = {
                 id: Date.now() + Math.random(),
                 mesh: pin.mesh,
@@ -92,7 +98,7 @@ export default function VeltBabylonComments(props: {
         }
         markersRef.current = newMarkers
         setMarkers(newMarkers)
-    }, [rebuiltPins, sceneRef, canvasRef])
+    }, [computedPins, sceneRef, canvasRef])
 
     // Per-frame projection using scene.onBeforeRenderObservable
     useEffect(() => {
