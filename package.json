@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^8.30.0",
-    "@veltdev/react": "^4.5.6-beta.4",
+    "@veltdev/react": "^4.7.1-beta.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
@@ -19,7 +19,7 @@
     "@eslint/js": "^9.36.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
-    "@veltdev/types": "^4.5.6-beta.4",
+    "@veltdev/types": "^4.7.1-beta.6",
     "@vitejs/plugin-react": "^5.0.3",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",

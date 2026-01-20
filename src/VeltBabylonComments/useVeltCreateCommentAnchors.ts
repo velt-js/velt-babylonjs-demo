@@ -5,7 +5,7 @@
 // - Reconstruct pins from existing Velt annotations so any scene can render them
 import type { AbstractMesh, ArcRotateCamera, Engine, Scene } from '@babylonjs/core';
 import { Matrix, PointerEventTypes, Vector3, Viewport } from '@babylonjs/core';
-import { useCommentAddHandler, useCommentModeState } from '@veltdev/react';
+import { useCommentEventCallback, useCommentModeState } from '@veltdev/react';
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
@@ -31,7 +31,6 @@ export type BabylonCommentAnchor = {
 }
 
 /**
- * useVeltBabylonComments
  * Encapsulates all Babylon ⇄ Velt wiring so scenes remain focused on rendering.
  *
  * Params
@@ -59,23 +58,17 @@ export function useVeltCreateCommentAnchors(params: {
     }, [commentModeState])
 
     const clickedAnchorRef = useRef<BabylonCommentAnchor | null>(null);
-    const addHandler = useCommentAddHandler();
+    const commentEventCallbackData = useCommentEventCallback('addCommentAnnotation');
 
-    // If the Velt addHandler becomes available AFTER a click, push the latest anchor
     useEffect(() => {
-        console.log('useVeltBabylonComments:addHandler changed', addHandler, clickedAnchorRef.current);
-        if (addHandler && sceneId && clickedAnchorRef.current) {
-            try {
-                const babylonAnchorData = {
-                    ...clickedAnchorRef.current,
-                    sceneId,
-                };
-                addHandler.addContext({ babylonAnchorData, commentType: 'manual' });
-            } catch (err) {
-                console.error('useVeltBabylonComments:addContext on handler change error', err)
-            }
+        if (commentEventCallbackData) {
+            const babylonAnchorData = {
+                ...clickedAnchorRef.current,
+                sceneId,
+            };
+          commentEventCallbackData.addContext({ babylonAnchorData, commentType: 'manual' });
         }
-    }, [addHandler])
+      }, [commentEventCallbackData]);
 
     // Build anchor data from a world point/mesh (explains "why": stable re-anchoring)
     const buildAnchor = useCallback((world: Vector3, mesh: AbstractMesh | null) => {
@@ -182,7 +175,7 @@ export function useVeltCreateCommentAnchors(params: {
                 scene.onPointerObservable.remove(observer);
             }
         }
-    }, [commentModeStateRef, isPlayingRef, sceneRef, cameraRef, buildAnchor, ready, canvasRef, addHandler]);
+    }, [commentModeStateRef, isPlayingRef, sceneRef, cameraRef, buildAnchor, ready, canvasRef]);
 
     return {
         commentMode: !!commentModeState,

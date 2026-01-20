@@ -1,24 +1,37 @@
 // VeltBabylonComments
-// Renders Velt comment pins on top of a Babylon scene using DOM overlays and portals.
+// Renders Velt comment pins on top of a Babylon scene using DOM overlays.
 // This component is scene-agnostic: it reads Babylon refs and uses the
 // useVeltBabylonComments hook to (a) attach pointer capture for addContext and
 // (b) reconstruct existing annotation pins to render.
 import type { AbstractMesh, ArcRotateCamera, Engine, Scene } from '@babylonjs/core'
 import { Matrix, Vector3, Viewport } from '@babylonjs/core'
 import { VeltCommentPin } from '@veltdev/react'
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useVeltBabylonComments } from './useVeltBabylonComments'
 import { useVeltCreateCommentAnchors } from './useVeltCreateCommentAnchors'
 
-type MarkerRecord = {
-    id: number
+type MarkerData = {
     mesh: AbstractMesh | null
     localPosition: Vector3
     worldStatic: Vector3 | null
-    annotationId: string
-    mountEl?: HTMLDivElement
 }
+
+// Memoized pin - only re-renders if annotationId changes
+const Pin = memo(function Pin({ annotationId }: { annotationId: string }) {
+    return (
+        <div
+            data-pin-id={annotationId}
+            style={{
+                position: 'absolute',
+                pointerEvents: 'auto',
+                zIndex: 12,
+                display: 'none',
+            }}
+        >
+            <VeltCommentPin annotationId={annotationId} />
+        </div>
+    )
+})
 
 export default function VeltBabylonComments(props: {
     sceneId: string,
@@ -49,74 +62,53 @@ export default function VeltBabylonComments(props: {
         ready,
     })
 
-    // Managed markers
-    const markersRef = useRef<MarkerRecord[]>([])
-    const [markers, setMarkers] = useState<MarkerRecord[]>([])
+    // Container ref for querying pin elements
+    const containerRef = useRef<HTMLDivElement>(null)
+    // Marker data for projection (single source of truth)
+    const markerDataRef = useRef<Map<string, MarkerData>>(new Map())
+    // Annotation IDs for React rendering
+    const [annotationIds, setAnnotationIds] = useState<string[]>([])
 
-    // Rebuild markers whenever annotations change
+    // Sync marker data and IDs when computedPins change
     useEffect(() => {
-        const scene = sceneRef.current;
-        const wrapper = canvasRef.current?.parentElement as HTMLDivElement | null;
-        if (!scene || !wrapper) return;
-
-        // Clear existing markers if none to show
         if (!computedPins || computedPins.length === 0) {
-            for (const markerRef of markersRef.current) {
-                if (markerRef.mountEl && markerRef.mountEl.parentNode) {
-                    markerRef.mountEl.parentNode.removeChild(markerRef.mountEl);
-                }
-            }
-            markersRef.current = []
-            setMarkers([])
+            markerDataRef.current.clear()
+            setAnnotationIds([])
             return
         }
 
-        const newMarkers: MarkerRecord[] = []
+        // Update marker data ref (no re-render needed)
+        const newData = new Map<string, MarkerData>()
+        const newIds: string[] = []
         for (const pin of computedPins) {
-            const record: MarkerRecord = {
-                id: Date.now() + Math.random(),
+            newData.set(pin.annotationId, {
                 mesh: pin.mesh,
                 localPosition: pin.localPosition,
                 worldStatic: pin.worldStatic,
-                annotationId: pin.annotationId,
-                mountEl: undefined,
+            })
+            newIds.push(pin.annotationId)
+        }
+        markerDataRef.current = newData
+
+        // Only update state if IDs actually changed
+        setAnnotationIds(prev => {
+            const newSet = new Set(newIds)
+            if (prev.length === newIds.length && prev.every(id => newSet.has(id))) {
+                return prev
             }
+            return newIds
+        })
+    }, [computedPins])
 
-            const mount = document.createElement('div')
-            mount.style.position = 'absolute'
-            mount.style.pointerEvents = 'auto'
-            mount.style.zIndex = '12'
-            wrapper.appendChild(mount)
-            record.mountEl = mount
-
-            newMarkers.push(record)
-        }
-
-        // Replace markers
-        for (const m of markersRef.current) {
-            if (m.mountEl && m.mountEl.parentNode) m.mountEl.parentNode.removeChild(m.mountEl)
-        }
-        markersRef.current = newMarkers
-        setMarkers(newMarkers)
-    }, [computedPins, sceneRef, canvasRef])
-
-    // Per-frame projection using scene.onBeforeRenderObservable
+    // Project 3D pin positions to 2D screen coordinates every frame.
+    // Runs in Babylon's render loop (not React) for 60fps performance.
     useEffect(() => {
         const scene = sceneRef.current
         const camera = cameraRef.current
         const engine = engineRef.current
         const canvas = canvasRef.current
-        if (!scene || !camera || !engine || !canvas) {
-            console.log('VeltBabylonComments:projection observer not attached (missing deps)', {
-                hasScene: !!scene,
-                hasCamera: !!camera,
-                hasEngine: !!engine,
-                hasCanvas: !!canvas,
-            })
-            return
-        }
-
-        console.log('VeltBabylonComments:attaching projection observer')
+        const container = containerRef.current
+        if (!scene || !camera || !engine || !canvas || !container) return
 
         const observer = scene.onBeforeRenderObservable.add(() => {
             const renderW = engine.getRenderWidth()
@@ -125,58 +117,43 @@ export default function VeltBabylonComments(props: {
             const rect = canvas.getBoundingClientRect()
             const scaleX = rect.width / renderW
             const scaleY = rect.height / renderH
-            for (const markerRef of markersRef.current) {
-                // If mesh is missing (e.g., different scene), use worldStatic fallback
-                const worldPos = markerRef.mesh
-                    ? Vector3.TransformCoordinates(markerRef.localPosition, markerRef.mesh.getWorldMatrix())
-                    : (markerRef.worldStatic as Vector3)
+
+            for (const [id, data] of markerDataRef.current) {
+                const el = container.querySelector<HTMLDivElement>(`[data-pin-id="${id}"]`)
+                if (!el) continue
+
+                const worldPos = data.mesh
+                    ? Vector3.TransformCoordinates(data.localPosition, data.mesh.getWorldMatrix())
+                    : data.worldStatic
                 if (!worldPos) {
+                    el.style.display = 'none'
                     continue
                 }
+
                 const projected = Vector3.Project(
                     worldPos,
                     Matrix.Identity(),
                     scene.getTransformMatrix(),
                     viewport
                 )
-                const isVisible = projected.z >= 0 && projected.z <= 1
-                const left = projected.x * scaleX
-                const top = projected.y * scaleY
-                if (!isVisible) {
-                    if (markerRef.mountEl) markerRef.mountEl.style.display = 'none'
+
+                if (projected.z < 0 || projected.z > 1) {
+                    el.style.display = 'none'
                 } else {
-                    if (markerRef.mountEl) {
-                        markerRef.mountEl.style.display = 'block'
-                        markerRef.mountEl.style.left = `${left}px`
-                        markerRef.mountEl.style.top = `${top}px`
-                        markerRef.mountEl.style.transform = 'translate(-50%, -50%)'
-                    }
+                    el.style.display = 'block'
+                    el.style.left = `${projected.x * scaleX}px`
+                    el.style.top = `${projected.y * scaleY}px`
+                    el.style.transform = 'translate(-50%, -50%)'
                 }
             }
         })
 
-        return () => {
-            if (scene && observer) scene.onBeforeRenderObservable.remove(observer)
-        }
+        return () => { scene.onBeforeRenderObservable.remove(observer) }
     }, [sceneRef, cameraRef, engineRef, canvasRef, ready])
 
-    // Clean up markers on unmount
-    useEffect(() => {
-        return () => {
-            for (const m of markersRef.current) {
-                if (m.mountEl && m.mountEl.parentNode) m.mountEl.parentNode.removeChild(m.mountEl)
-            }
-            markersRef.current = []
-        }
-    }, [])
-
     return (
-        <>
-            {/* Render Velt pins via portals to preserve Provider context */}
-            {markers.map((m) => (m.mountEl ? createPortal(
-                <VeltCommentPin key={m.id} annotationId={m.annotationId} />,
-                m.mountEl
-            ) : null))}
-        </>
+        <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {annotationIds.map(id => <Pin key={id} annotationId={id} />)}
+        </div>
     )
 }
