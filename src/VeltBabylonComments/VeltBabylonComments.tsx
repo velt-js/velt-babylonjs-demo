@@ -100,7 +100,8 @@ export default function VeltBabylonComments(props: {
         })
     }, [computedPins])
 
-    // Per-frame projection
+    // Project 3D pin positions to 2D screen coordinates every frame.
+    // Runs in Babylon's render loop (not React) for 60fps performance.
     useEffect(() => {
         const scene = sceneRef.current
         const camera = cameraRef.current
