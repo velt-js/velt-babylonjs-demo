@@ -71,6 +71,9 @@ export default function VeltBabylonComments(props: {
 
     // Sync marker data and IDs when computedPins change
     useEffect(() => {
+
+        console.log('DEBUG:computedPins', computedPins);
+
         if (!computedPins || computedPins.length === 0) {
             markerDataRef.current.clear()
             setAnnotationIds([])
@@ -81,6 +84,7 @@ export default function VeltBabylonComments(props: {
         const newData = new Map<string, MarkerData>()
         const newIds: string[] = []
         for (const pin of computedPins) {
+            console.log('DEBUG:pin', pin.annotationId);
             newData.set(pin.annotationId, {
                 mesh: pin.mesh,
                 localPosition: pin.localPosition,
@@ -88,6 +92,7 @@ export default function VeltBabylonComments(props: {
             })
             newIds.push(pin.annotationId)
         }
+        console.log('DEBUG:newIds', newIds.length);
         markerDataRef.current = newData
 
         // Only update state if IDs actually changed
@@ -98,10 +103,10 @@ export default function VeltBabylonComments(props: {
             }
             return newIds
         })
+        console.log('DEBUG:annotationIds', annotationIds.length);
     }, [computedPins])
 
-    // Project 3D pin positions to 2D screen coordinates every frame.
-    // Runs in Babylon's render loop (not React) for 60fps performance.
+    // Per-frame projection
     useEffect(() => {
         const scene = sceneRef.current
         const camera = cameraRef.current

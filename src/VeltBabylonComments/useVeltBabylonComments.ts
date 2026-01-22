@@ -66,16 +66,12 @@ export function useVeltBabylonComments(params: {
 	// Get all the annotations
 	const allAnnotations = useCommentAnnotations();
 
-	// Filter the annotations to only the ones that are in the current scene
-	const annotations = useMemo(() => {
-		return allAnnotations?.filter((annotation) => annotation?.context?.babylonAnchorData?.sceneId === sceneId);
-	}, [allAnnotations, sceneId]);
-
 	const computedPins = useMemo<ComputedAnnotationPin[]>(() => {
 		const scene = sceneRef.current;
-		if (!scene || !annotations) return [];
+		console.log('DEBUG:allAnnotations', allAnnotations);
+		if (!scene || !allAnnotations) return [];
 		const pins: ComputedAnnotationPin[] = [];
-		for (const annotation of annotations) {
+		for (const annotation of allAnnotations) {
 			const annotationContext = annotation.context;
 			const anchor: BabylonCommentAnchor | undefined = annotationContext?.babylonAnchorData;
 			if (!anchor) continue;
@@ -112,7 +108,7 @@ export function useVeltBabylonComments(params: {
 			});
 		}
 		return pins
-	}, [annotations, sceneRef, resolveMesh])
+	}, [allAnnotations, sceneRef, resolveMesh])
 
 	return {
 		computedPins,

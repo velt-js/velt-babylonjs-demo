@@ -8,7 +8,7 @@ function VeltInitializeDocument() {
     useEffect(() => {
         setDocuments([
             {
-                id: 'velt-babylonjs-demo-document1-2-oct-2025',
+                id: 'velt-babylonjs-demo-document1-2-oct-2025-v2',
                 metadata: {
                     documentName: 'Velt BabylonJS Demo Document1 02 Oct 2025',
                 }
