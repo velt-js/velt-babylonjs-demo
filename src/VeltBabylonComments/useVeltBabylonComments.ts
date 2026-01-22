@@ -61,7 +61,7 @@ export function useVeltBabylonComments(params: {
 	/** Optional custom resolver to map anchor.local mesh identity to a runtime mesh */
 	resolveMesh?: (scene: Scene, local: { meshId: string; meshUniqueId: number; meshName: string } | undefined) => AbstractMesh | null
 }) {
-	const { sceneId, sceneRef, resolveMesh } = params
+	const { sceneId: _sceneId, sceneRef, resolveMesh } = params
 
 	// Get all the annotations
 	const allAnnotations = useCommentAnnotations();
