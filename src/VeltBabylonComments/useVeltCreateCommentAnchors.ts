@@ -5,7 +5,7 @@
 // - Reconstruct pins from existing Velt annotations so any scene can render them
 import type { AbstractMesh, ArcRotateCamera, Engine, Scene } from '@babylonjs/core';
 import { Matrix, PointerEventTypes, Vector3, Viewport } from '@babylonjs/core';
-import { useCommentEventCallback, useCommentModeState } from '@veltdev/react';
+import { useCommentAddHandler, useCommentModeState } from '@veltdev/react';
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
@@ -58,17 +58,23 @@ export function useVeltCreateCommentAnchors(params: {
     }, [commentModeState])
 
     const clickedAnchorRef = useRef<BabylonCommentAnchor | null>(null);
-    const commentEventCallbackData = useCommentEventCallback('addCommentAnnotation');
+    const addHandler = useCommentAddHandler();
 
+    // If the Velt addHandler becomes available AFTER a click, push the latest anchor
     useEffect(() => {
-        if (commentEventCallbackData) {
-            const babylonAnchorData = {
-                ...clickedAnchorRef.current,
-                sceneId,
-            };
-          commentEventCallbackData.addContext({ babylonAnchorData, commentType: 'manual' });
+        console.log('useVeltBabylonComments:addHandler changed', addHandler, clickedAnchorRef.current);
+        if (addHandler && sceneId && clickedAnchorRef.current) {
+            try {
+                const babylonAnchorData = {
+                    ...clickedAnchorRef.current,
+                    sceneId,
+                };
+                addHandler.addContext({ babylonAnchorData, commentType: 'manual' });
+            } catch (err) {
+                console.error('useVeltBabylonComments:addContext on handler change error', err)
+            }
         }
-      }, [commentEventCallbackData]);
+    }, [addHandler, sceneId])
 
     // Build anchor data from a world point/mesh (explains "why": stable re-anchoring)
     const buildAnchor = useCallback((world: Vector3, mesh: AbstractMesh | null) => {
@@ -169,6 +175,7 @@ export function useVeltCreateCommentAnchors(params: {
             const clickedAnchor = buildAnchor(world, mesh);
             if (!clickedAnchor) return;
             clickedAnchorRef.current = clickedAnchor;
+            console.log('useVeltBabylonComments:anchor captured', clickedAnchor);
         }, PointerEventTypes.POINTERDOWN, true)
         return () => {
             if (scene && observer) {

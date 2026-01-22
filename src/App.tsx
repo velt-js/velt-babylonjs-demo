@@ -1,5 +1,5 @@
 import {
-  VeltComments, VeltCommentsSidebar, VeltCommentsSidebarButton,
+  VeltCommentsSidebarButton,
   VeltCommentTool, VeltPresence, VeltProvider
 } from '@veltdev/react'
 import './App.css'
@@ -11,8 +11,6 @@ function App() {
     <VeltProvider
       apiKey={'Emcfab4ysRXaC1CZ8hmG'}
     >
-      <VeltComments />
-      <VeltCommentsSidebar pageMode={true} />
       <div className="app-container">
         <header className="app-header">
           <h1 className="app-title">Velt BabylonJS App</h1>

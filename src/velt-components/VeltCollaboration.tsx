@@ -1,3 +1,4 @@
+import { VeltCommentsSidebar, VeltComments } from '@veltdev/react';
 import VeltInitializeDocument from './VeltInitializeDocument';
 import VeltInitializeUser from './VeltInitializeUser';
 
@@ -6,6 +7,8 @@ function VeltCollaboration() {
         <>
             <VeltInitializeDocument />
             <VeltInitializeUser />
+            <VeltComments />
+            <VeltCommentsSidebar pageMode={true} />
         </>
     )
 }
