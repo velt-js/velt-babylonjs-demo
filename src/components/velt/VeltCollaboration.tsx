@@ -7,8 +7,8 @@ function VeltCollaboration() {
         <>
             <VeltInitializeDocument />
             <VeltInitializeUser />
-            <VeltComments />
-            <VeltCommentsSidebar pageMode={true} />
+            <VeltComments recordings='none' />
+            <VeltCommentsSidebar readOnly={true} expandOnSelection={false} />
         </>
     )
 }

@@ -4,7 +4,7 @@ import {
 } from '@veltdev/react'
 import './App.css'
 import BabylonScene from './components/BabylonScene'
-import VeltCollaboration from './velt-components/VeltCollaboration'
+import VeltCollaboration from './components/velt/VeltCollaboration'
 
 function App() {
   return (

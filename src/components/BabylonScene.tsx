@@ -9,7 +9,7 @@ import {
     Vector3,
 } from '@babylonjs/core'
 import { useEffect, useRef, useState } from 'react'
-import { VeltBabylonComments } from '../VeltBabylonComments'
+import { VeltBabylonComments } from './VeltBabylonComments'
 
 export default function BabylonScene() {
     const wrapperRef = useRef<HTMLDivElement | null>(null)
